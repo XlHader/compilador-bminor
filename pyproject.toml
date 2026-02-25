@@ -1,5 +1,5 @@
 [project]
-name = "proyecto"
+name = "proyect"
 version = "0.1.0"
 description = "Base project for compiler"
 readme = "README.md"
