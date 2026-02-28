@@ -68,7 +68,6 @@ class BMinorLexer(Lexer):
 
     ignore = " \t\r"
     ignore_line_comment = r"//[^\n]*"
-    ignore_block_comment = r"/\*(.|\n)*?\*/"
 
     INC = r"\+\+"
     DEC = r"--"
@@ -149,6 +148,10 @@ class BMinorLexer(Lexer):
     def ignore_newline(self, t):
         self.lineno += t.value.count("\n")
 
+    @_(r"/\*(.|\n)*?\*/")  # noqa: F821
+    def ignore_block_comment(self, t):
+        self.lineno += t.value.count("\n")
+
     @_(r"\d+\.(?!\d)(?:[eE][+-]?\d+)?")  # noqa: F821
     def malformed_float(self, t):
         self._error("Malformed float literal", t.value, t.index)
@@ -185,7 +188,7 @@ class BMinorLexer(Lexer):
 
         return t
 
-    @_(r"\"([^\\\n\"]|\\.)*(\n|$)")  # noqa: F821
+    @_(r"\"([^\\\n\"]|\\.)*(\\)?(\n|$)")  # noqa: F821
     def unterminated_string(self, t):
         self._error(
             "Unterminated string literal", t.value.rstrip("\n"), t.index
@@ -204,7 +207,7 @@ class BMinorLexer(Lexer):
         t.value = decoded
         return t
 
-    @_(r"'([^\\\n]|\\.)*(\n|$)")  # noqa: F821
+    @_(r"'([^\\\n]|\\.)*(\\)?(\n|$)")  # noqa: F821
     def unterminated_char(self, t):
         self._error("Unterminated char literal", t.value.rstrip("\n"), t.index)
         self.lineno += t.value.count("\n")

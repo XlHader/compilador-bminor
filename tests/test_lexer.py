@@ -98,6 +98,16 @@ def test_unterminated_string() -> None:
     )
 
 
+@pytest.mark.parametrize("source", ['"abc\\', '"abc\\\n'])
+def test_unterminated_string_with_trailing_backslash(
+    source: str,
+) -> None:
+    result = tokenize_bminor(source)
+    assert [e.message for e in result.errors] == [
+        "Unterminated string literal"
+    ]
+
+
 @pytest.mark.parametrize(
     "source",
     ["c: char = '';", "c: char = 'ab';", r"c: char = '\q';"],
@@ -105,6 +115,14 @@ def test_unterminated_string() -> None:
 def test_invalid_chars(source: str) -> None:
     result = tokenize_bminor(source)
     assert result.errors
+
+
+@pytest.mark.parametrize("source", ["'a\\", "'a\\\n"])
+def test_unterminated_char_with_trailing_backslash(
+    source: str,
+) -> None:
+    result = tokenize_bminor(source)
+    assert [e.message for e in result.errors] == ["Unterminated char literal"]
 
 
 def test_invalid_escape_sequences() -> None:
@@ -194,3 +212,11 @@ def test_line_and_column_tracking() -> None:
     assert y.column == 3
     assert plus.line == 2
     assert plus.column == 9
+
+
+def test_multiline_block_comment_updates_line_tracking() -> None:
+    src = "/* a\n b */\nx = 1;\n"
+    result = tokenize_bminor(src)
+    x = next(t for t in result.tokens if t.lexeme == "x")
+    assert x.line == 3
+    assert x.column == 1
