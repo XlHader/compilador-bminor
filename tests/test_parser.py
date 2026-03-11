@@ -45,6 +45,15 @@ def test_parse_small_program() -> None:
     assert result.ast.declarations[1].name == "main"
 
 
+def test_parse_empty_program() -> None:
+    result = parse_bminor("")
+
+    assert result.lex_errors == []
+    assert result.parse_errors == []
+    assert isinstance(result.ast, Program)
+    assert result.ast.declarations == []
+
+
 def test_parse_initializer_precedence() -> None:
     result = parse_bminor("x: integer = 3 + 4 * 2;")
 
@@ -56,6 +65,21 @@ def test_parse_initializer_precedence() -> None:
     assert decl.initializer.operator == "+"
     assert isinstance(decl.initializer.right, BinaryExpr)
     assert decl.initializer.right.operator == "*"
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "main: function void () = { 1 = 2; }",
+        "main: function void () = { (a + b) += 3; }",
+    ],
+)
+def test_parse_rejects_non_lvalue_assignment_targets(source: str) -> None:
+    result = parse_bminor(source)
+
+    assert result.lex_errors == []
+    assert result.ast is None
+    assert result.parse_errors
 
 
 def test_parse_reports_line_and_column() -> None:

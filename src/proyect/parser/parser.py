@@ -74,9 +74,9 @@ class BMinorParser(Parser):
         self.source = source
         self.errors: list[ParseError] = []
 
-    @_("decl_list")
+    @_("opt_decl_list")
     def program(self, p):
-        declarations = p.decl_list
+        declarations = p.opt_decl_list
         if declarations:
             span = self._merge_spans(
                 declarations[0].span, declarations[-1].span
@@ -84,6 +84,14 @@ class BMinorParser(Parser):
         else:
             span = SourceSpan(line=1, column=1, index=0, end=0)
         return Program(span=span, declarations=declarations)
+
+    @_("empty")
+    def opt_decl_list(self, p):
+        return []
+
+    @_("decl_list")
+    def opt_decl_list(self, p):
+        return p.decl_list
 
     @_("decl_list decl")
     def decl_list(self, p):
@@ -404,54 +412,74 @@ class BMinorParser(Parser):
     def expr(self, p):
         return p.expr1
 
-    @_("conditional_expr ASSIGN expr1")
+    @_("lvalue ASSIGN expr1")
     def expr1(self, p):
         return AssignmentExpr(
             span=self._span_from_parts(p),
             operator="=",
-            target=p.conditional_expr,
+            target=p.lvalue,
             value=p.expr1,
         )
 
-    @_("conditional_expr PLUS_ASSIGN expr1")
+    @_("lvalue PLUS_ASSIGN expr1")
     def expr1(self, p):
         return AssignmentExpr(
             span=self._span_from_parts(p),
             operator="+=",
-            target=p.conditional_expr,
+            target=p.lvalue,
             value=p.expr1,
         )
 
-    @_("conditional_expr MINUS_ASSIGN expr1")
+    @_("lvalue MINUS_ASSIGN expr1")
     def expr1(self, p):
         return AssignmentExpr(
             span=self._span_from_parts(p),
             operator="-=",
-            target=p.conditional_expr,
+            target=p.lvalue,
             value=p.expr1,
         )
 
-    @_("conditional_expr TIMES_ASSIGN expr1")
+    @_("lvalue TIMES_ASSIGN expr1")
     def expr1(self, p):
         return AssignmentExpr(
             span=self._span_from_parts(p),
             operator="*=",
-            target=p.conditional_expr,
+            target=p.lvalue,
             value=p.expr1,
         )
 
-    @_("conditional_expr DIVIDE_ASSIGN expr1")
+    @_("lvalue DIVIDE_ASSIGN expr1")
     def expr1(self, p):
         return AssignmentExpr(
             span=self._span_from_parts(p),
             operator="/=",
-            target=p.conditional_expr,
+            target=p.lvalue,
             value=p.expr1,
         )
 
     @_("conditional_expr")
     def expr1(self, p):
         return p.conditional_expr
+
+    @_("postfix LBRACKET expr RBRACKET")
+    def lvalue(self, p):
+        return IndexExpr(
+            span=self._span_from_parts(p),
+            collection=p.postfix,
+            index_expr=p.expr,
+        )
+
+    @_("postfix DOT ID")
+    def lvalue(self, p):
+        return MemberExpr(
+            span=self._span_from_parts(p),
+            object_expr=p.postfix,
+            member=p.ID,
+        )
+
+    @_("ID")
+    def lvalue(self, p):
+        return IdentifierExpr(span=self._span_from_slice(p), name=p.ID)
 
     @_("expr2 QUESTION expr COLON conditional_expr")
     def conditional_expr(self, p):
