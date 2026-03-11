@@ -18,6 +18,7 @@ class BMinorLexer(Lexer):
         "AUTO",
         "BOOLEAN",
         "CHAR",
+        "CLASS",
         "ELSE",
         "FALSE",
         "FLOAT",
@@ -25,6 +26,7 @@ class BMinorLexer(Lexer):
         "FUNCTION",
         "IF",
         "INTEGER",
+        "NEW",
         "PRINT",
         "RETURN",
         "STRING",
@@ -110,6 +112,7 @@ class BMinorLexer(Lexer):
         "auto": "AUTO",
         "boolean": "BOOLEAN",
         "char": "CHAR",
+        "class": "CLASS",
         "else": "ELSE",
         "false": "FALSE",
         "float": "FLOAT",
@@ -117,6 +120,7 @@ class BMinorLexer(Lexer):
         "function": "FUNCTION",
         "if": "IF",
         "integer": "INTEGER",
+        "new": "NEW",
         "print": "PRINT",
         "return": "RETURN",
         "string": "STRING",
@@ -207,12 +211,12 @@ class BMinorLexer(Lexer):
         t.value = decoded
         return t
 
-    @_(r"'([^\\\n]|\\.)*(\\)?(\n|$)")  # noqa: F821
+    @_(r"'([^\\\n']|\\.)*(\\)?(\n|$)")  # noqa: F821
     def unterminated_char(self, t):
         self._error("Unterminated char literal", t.value.rstrip("\n"), t.index)
         self.lineno += t.value.count("\n")
 
-    @_(r"'([^\\\n]|\\.)*'")  # noqa: F821
+    @_(r"'([^\\\n']|\\.)*'")  # noqa: F821
     def CHAR_LITERAL(self, t):  # noqa: N802
         raw = t.value[1:-1]
         decoded = self._decode_escapes(raw, t.index)

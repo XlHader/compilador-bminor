@@ -69,6 +69,19 @@ def test_tokenize_sieve_bp() -> None:
     assert result.errors == []
 
 
+def test_valid_single_char_literal() -> None:
+    result = tokenize_bminor("c: char = 'q';")
+    char_token = next(t for t in result.tokens if t.type == "CHAR_LITERAL")
+    assert char_token.value == "q"
+    assert result.errors == []
+
+
+def test_tokenize_good0_bminor() -> None:
+    src = (ROOT / "examples" / "good0.bminor").read_text(encoding="utf-8")
+    result = tokenize_bminor(src)
+    assert result.errors == []
+
+
 @pytest.mark.parametrize(
     ("source", "expected_types"),
     [

@@ -3,49 +3,48 @@ from pathlib import Path
 from typing import cast
 
 from rich.console import Console
+from rich.pretty import Pretty
 from rich.table import Table
 
-from .lexer import LexResult, tokenize_bminor
+from .lexer import LexError
 from .logging_config import configure_logging
+from .parser import ParseError, ParseResult, ast_to_dict, parse_bminor
 
 
-def _build_token_table(result: LexResult) -> Table:
-    table = Table(title="BMinor Lexer Output")
-    table.add_column("#", justify="right")
-    table.add_column("Type")
-    table.add_column("Lexeme")
-    table.add_column("Value")
-    table.add_column("Line", justify="right")
-    table.add_column("Col", justify="right")
-
-    for idx, token in enumerate(result.tokens, start=1):
-        table.add_row(
-            str(idx),
-            token.type,
-            repr(token.lexeme),
-            repr(token.value),
-            str(token.line),
-            str(token.column),
-        )
-
-    if result.errors:
-        table.caption = f"Lexical errors: {len(result.errors)}"
-
-    return table
-
-
-def _build_error_table(result: LexResult) -> Table:
-    table = Table(title="BMinor Lexer Errors")
+def _build_lex_error_table(errors: list[LexError]) -> Table:
+    table = Table(title="BMinor Lexical Errors")
     table.add_column("#", justify="right")
     table.add_column("Message")
     table.add_column("Lexeme")
     table.add_column("Line", justify="right")
     table.add_column("Col", justify="right")
 
-    for idx, error in enumerate(result.errors, start=1):
+    for idx, error in enumerate(errors, start=1):
         table.add_row(
             str(idx),
             error.message,
+            repr(error.lexeme),
+            str(error.line),
+            str(error.column),
+        )
+
+    return table
+
+
+def _build_parse_error_table(errors: list[ParseError]) -> Table:
+    table = Table(title="BMinor Syntax Errors")
+    table.add_column("#", justify="right")
+    table.add_column("Message")
+    table.add_column("Token")
+    table.add_column("Lexeme")
+    table.add_column("Line", justify="right")
+    table.add_column("Col", justify="right")
+
+    for idx, error in enumerate(errors, start=1):
+        table.add_row(
+            str(idx),
+            error.message,
+            error.token_type,
             repr(error.lexeme),
             str(error.line),
             str(error.column),
@@ -58,16 +57,21 @@ def _read_source(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
+def _print_parse_success(console: Console, result: ParseResult) -> None:
+    console.print("[bold green]Parse successful[/bold green]")
+    console.print(Pretty(ast_to_dict(result.ast), expand_all=True))
+
+
 def main() -> int:
     console = Console()
     configure_logging()
 
-    parser = ArgumentParser(description="Run BMinor lexer on a source file")
+    parser = ArgumentParser(description="Run BMinor parser on a source file")
     _ = parser.add_argument(
         "source",
         nargs="?",
-        default="examples/test.bp",
-        help="Path to a .bp file (default: examples/test.bp)",
+        default="examples/parser.bp",
+        help="Path to a .bp file (default: examples/parser.bp)",
     )
     args: Namespace = parser.parse_args()
 
@@ -77,17 +81,19 @@ def main() -> int:
         return 2
 
     source = _read_source(source_path)
-    result = tokenize_bminor(source)
-    token_table = _build_token_table(result)
-    error_table = _build_error_table(result)
+    result = parse_bminor(source)
 
-    console.print(f"[bold green]Lexing:[/bold green] {source_path}")
-    console.print(token_table)
+    console.print(f"[bold green]Parsing:[/bold green] {source_path}")
 
-    if error_table.row_count > 0:
-        console.print(error_table)
+    if result.lex_errors:
+        console.print(_build_lex_error_table(result.lex_errors))
         return 1
 
+    if result.parse_errors:
+        console.print(_build_parse_error_table(result.parse_errors))
+        return 1
+
+    _print_parse_success(console, result)
     return 0
 
 
