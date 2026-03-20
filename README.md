@@ -9,7 +9,7 @@ Proyecto para implementar un compilador de BMinor por fases usando Python y
 - El lexer reporta errores con linea, columna e indice.
 - El parser construye un AST y reporta errores sintacticos con token,
   lexema, linea y columna.
-- La CLI ahora ejecuta el parser por defecto.
+- La CLI ejecuta el parser y visualiza el AST con Rich Tree y Graphviz.
 - Las fases semanticas quedan para iteraciones siguientes.
 
 ## Caracteristicas soportadas hoy
@@ -34,9 +34,11 @@ Proyecto para implementar un compilador de BMinor por fases usando Python y
   - `examples/sieve.bp`
 - Lexer: `src/proyect/lexer/`
 - Parser y AST: `src/proyect/parser/`
+- Visualizacion del AST: `src/proyect/ast_visualizer/`
 - Entrypoint CLI: `src/proyect/main.py`
 - Tests del lexer: `tests/test_lexer.py`
 - Tests del parser: `tests/test_parser.py`
+- Tests del visualizador: `tests/test_ast_visualizer.py`
 
 ## Requisitos
 
@@ -78,8 +80,8 @@ Codigos de salida de la CLI:
   columna.
 - Si hay errores sintacticos, muestra una tabla con mensaje, tipo de token,
   lexema, linea y columna.
-- Si no hay errores, muestra `Parse successful` y un volcado estructurado del
-  AST.
+- Si no hay errores, muestra `Parse successful` y el AST como arbol Rich Tree
+  (opcionalmente tambien como imagen Graphviz con `--graphviz`).
 
 ## Uso programatico
 
@@ -146,6 +148,99 @@ Algunos nodos AST disponibles desde `proyect.parser`:
 - `NewExpr`
 - `ConditionalExpr`
 
+## Visualizacion del AST
+
+Despues de un parse exitoso, puedes visualizar el AST de dos formas:
+
+### Rich Tree (terminal)
+
+Por defecto, la CLI muestra el AST como un arbol en la terminal:
+
+```bash
+PYTHONPATH=src python -m proyect.main examples/parser.bp
+```
+
+Salida ejemplo:
+```
+Parse successful
+Program
+└── Function(main)
+    ├── Signature
+    │   └── Type(integer)
+    └── Block
+        ├── Print
+        │   └── Literal('parser ok')
+        └── Return
+            └── Literal(0)
+```
+
+Para desactivar:
+```bash
+PYTHONPATH=src python -m proyect.main examples/parser.bp --no-tree
+```
+
+### Graphviz (imagen)
+
+Genera una imagen PNG del grafo AST:
+
+```bash
+PYTHONPATH=src python -m proyect.main examples/parser.bp --graphviz
+```
+
+Esto guarda `output/ast.png` con una visualizacion grafica del AST donde:
+- **Program**: rojo, forma box
+- **Declaraciones** (`Function(...)`, `Variable(...)`, `Class(...)`): azul
+- **Statements** (`Block`, `If`, `While`, `For`, `Return`): naranja
+- **Expresiones** (`BinaryOp(...)`, `Literal(...)`, `Assign(...)`): verde
+- **Tipos** (`Type(...)`, `Signature`, `Parameter(...)`): gris
+
+La visualizacion usa aristas ortogonales y etiquetas cortas como `decl 1`,
+`body`, `stmt 1`, `lhs`, `rhs`, `cond` y `returns` para que el diagrama se
+mantenga legible en programas medianos.
+
+Para un path personalizado:
+```bash
+PYTHONPATH=src python -m proyect.main examples/parser.bp --graphviz mi_ast.png
+```
+
+**Nota importante:** El paquete `graphviz` en `requirements.txt` es solo la libreria Python. Para generar imagenes PNG necesitas el ejecutable `dot` de Graphviz instalado en el sistema operativo:
+
+```bash
+# Ubuntu/Debian
+sudo apt install graphviz
+
+# macOS
+brew install graphviz
+
+# Windows
+# Descargar desde: https://graphviz.org/download/
+```
+
+Sin el ejecutable del sistema, veras un error como:
+```
+Error generating graph: failed to execute PosixPath('dot')...
+```
+
+El programa continuara funcionando (mostrara el arbol Rich Tree), pero no generara la imagen.
+
+### Uso programatico
+
+```python
+from pathlib import Path
+
+from proyect.ast_visualizer import render_ast_tree, render_ast_graphviz
+from proyect.parser import parse_bminor
+
+result = parse_bminor(source)
+if result.ast:
+    # Rich Tree
+    tree = render_ast_tree(result.ast)
+    print(tree)
+
+    # Graphviz
+    render_ast_graphviz(result.ast, Path("output/mi_ast.png"))
+```
+
 ## Tests y calidad de codigo
 
 ```bash
@@ -158,8 +253,10 @@ pytest -vv
 pytest --collect-only
 pytest tests/test_lexer.py
 pytest tests/test_parser.py
+pytest tests/test_ast_visualizer.py
 pytest tests/test_parser.py::test_parse_sieve_bp
 pytest tests/test_parser.py -k ternary
+pytest tests/test_ast_visualizer.py -k tree
 ```
 
 ## Casos cubiertos por tests
@@ -171,6 +268,8 @@ pytest tests/test_parser.py -k ternary
 - Errores sintacticos con linea y columna.
 - Rechazo de asignaciones con targets no validos.
 - Soporte para `new`, acceso por miembro, ternario y `examples/sieve.bp`.
+- Visualizacion del AST con Rich Tree (estructura, nodos, expresiones).
+- Generacion de graficos con Graphviz (archivos PNG).
 
 ## Estilo de codigo
 

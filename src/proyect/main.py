@@ -3,12 +3,12 @@ from pathlib import Path
 from typing import cast
 
 from rich.console import Console
-from rich.pretty import Pretty
 from rich.table import Table
 
+from .ast_visualizer import render_ast_graphviz, render_ast_tree
 from .lexer import LexError
 from .logging_config import configure_logging
-from .parser import ParseError, ParseResult, ast_to_dict, parse_bminor
+from .parser import ParseError, ParseResult, parse_bminor
 
 
 def _build_lex_error_table(errors: list[LexError]) -> Table:
@@ -57,9 +57,14 @@ def _read_source(path: Path) -> str:
     return path.read_text(encoding="utf-8")
 
 
-def _print_parse_success(console: Console, result: ParseResult) -> None:
+def _print_parse_success(
+    console: Console, result: ParseResult, show_tree: bool = True
+) -> None:
+    if result.ast is None:
+        return
     console.print("[bold green]Parse successful[/bold green]")
-    console.print(Pretty(ast_to_dict(result.ast), expand_all=True))
+    if show_tree:
+        console.print(render_ast_tree(result.ast))
 
 
 def main() -> int:
@@ -73,7 +78,27 @@ def main() -> int:
         default="examples/parser.bp",
         help="Path to a .bp file (default: examples/parser.bp)",
     )
+    _ = parser.add_argument(
+        "--tree",
+        action="store_true",
+        default=True,
+        help="Display AST as Rich tree (default: True)",
+    )
+    _ = parser.add_argument(
+        "--no-tree",
+        action="store_true",
+        help="Disable Rich tree display",
+    )
+    _ = parser.add_argument(
+        "--graphviz",
+        nargs="?",
+        const="output/ast.png",
+        metavar="PATH",
+        help="Generate Graphviz AST visualization (default: output/ast.png)",
+    )
     args: Namespace = parser.parse_args()
+
+    show_tree = args.tree and not args.no_tree
 
     source_path = Path(cast(str, args.source))
     if not source_path.exists() or not source_path.is_file():
@@ -93,7 +118,22 @@ def main() -> int:
         console.print(_build_parse_error_table(result.parse_errors))
         return 1
 
-    _print_parse_success(console, result)
+    _print_parse_success(console, result, show_tree)
+
+    if args.graphviz and result.ast is not None:
+        output_path = Path(args.graphviz)
+        try:
+            render_ast_graphviz(result.ast, output_path)
+            console.print(
+                f"[bold blue]AST graph saved to:[/bold blue] {output_path}"
+            )
+        except Exception as e:
+            console.print(f"[bold red]Error generating graph:[/bold red] {e}")
+            console.print(
+                "[yellow]Make sure Graphviz is installed on your system"
+                " (apt install graphviz / brew install graphviz)[/yellow]"
+            )
+
     return 0
 
 
