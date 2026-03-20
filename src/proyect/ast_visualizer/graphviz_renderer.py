@@ -40,7 +40,6 @@ from ..parser.models import (
     WhileStmt,
 )
 
-
 NODE_COLORS = {
     "program": ("#f8d7da", "#b42318"),
     "decl": ("#dbeafe", "#1d4ed8"),

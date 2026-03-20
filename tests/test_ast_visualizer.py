@@ -1,6 +1,5 @@
 # pyright: reportMissingImports=false
 from io import StringIO
-from pathlib import Path
 
 import pytest
 from rich.console import Console

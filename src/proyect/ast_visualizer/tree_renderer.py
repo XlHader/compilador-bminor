@@ -36,7 +36,6 @@ from ..parser.models import (
     WhileStmt,
 )
 
-
 NODE_STYLES: dict[type[Node], str] = {
     Program: "bold white",
     FunctionDecl: "bold blue",
