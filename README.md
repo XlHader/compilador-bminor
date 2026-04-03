@@ -84,6 +84,23 @@ Codigos de salida de la CLI:
 - Si no hay errores, muestra `Parse successful` y el AST como arbol Rich Tree
   (opcionalmente tambien como imagen Graphviz con `--graphviz`).
 
+## Validar los examples
+
+Con el entorno virtual activado, puedes correr todos los ejemplos de
+`examples/` con este script:
+
+```bash
+source .venv/bin/activate
+bash scripts/check_examples.sh
+```
+
+El script:
+
+- exige que `good*.bminor` terminen con exito,
+- exige que `bad*.bminor` fallen,
+- muestra la salida real de cada `bad*.bminor` para revisar por que falla,
+- y termina con codigo `1` si encuentra resultados inesperados.
+
 ## Uso programatico
 
 ### Lexer
