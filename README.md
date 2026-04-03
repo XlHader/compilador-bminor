@@ -5,12 +5,11 @@ Proyecto para implementar un compilador de BMinor por fases usando Python y
 
 ## Estado actual
 
-- Fase implementada: analisis lexico + analisis sintactico.
+- Fases implementadas: analisis lexico + analisis sintactico + analisis semantico.
 - El lexer reporta errores con linea, columna e indice.
 - El parser construye un AST y reporta errores sintacticos con token,
   lexema, linea y columna.
-- La CLI ejecuta el parser y visualiza el AST con Rich Tree y Graphviz.
-- Las fases semanticas quedan para iteraciones siguientes.
+- La CLI ejecuta parser, analisis semantico y visualiza el AST con Rich Tree y Graphviz.
 
 ## Caracteristicas soportadas hoy
 
@@ -70,8 +69,8 @@ PYTHONPATH=src python -m proyect.main examples/sieve.bp
 
 Codigos de salida de la CLI:
 
-- `0`: parse exitoso
-- `1`: se detectaron errores lexicos o sintacticos
+- `0`: analisis lexico, sintactico y semantico exitoso
+- `1`: se detectaron errores lexicos, sintacticos o semanticos
 - `2`: archivo fuente no encontrado
 
 ## Salida de la CLI
@@ -80,6 +79,8 @@ Codigos de salida de la CLI:
   columna.
 - Si hay errores sintacticos, muestra una tabla con mensaje, tipo de token,
   lexema, linea y columna.
+- Si hay errores semanticos, muestra una tabla con mensaje, contexto, linea
+  y columna.
 - Si no hay errores, muestra `Parse successful` y el AST como arbol Rich Tree
   (opcionalmente tambien como imagen Graphviz con `--graphviz`).
 

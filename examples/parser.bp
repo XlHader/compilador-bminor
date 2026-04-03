@@ -1,4 +1,0 @@
-main: function integer () = {
-    print "parser ok";
-    return 0;
-}

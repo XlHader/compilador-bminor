@@ -9,6 +9,7 @@ from .ast_visualizer import render_ast_graphviz, render_ast_tree
 from .lexer import LexError
 from .logging_config import configure_logging
 from .parser import ParseError, ParseResult, parse_bminor
+from .semantic import SemanticError, analyze_semantic
 
 
 def _build_lex_error_table(errors: list[LexError]) -> Table:
@@ -46,6 +47,26 @@ def _build_parse_error_table(errors: list[ParseError]) -> Table:
             error.message,
             error.token_type,
             repr(error.lexeme),
+            str(error.line),
+            str(error.column),
+        )
+
+    return table
+
+
+def _build_semantic_error_table(errors: list[SemanticError]) -> Table:
+    table = Table(title="BMinor Semantic Errors")
+    table.add_column("#", justify="right")
+    table.add_column("Message")
+    table.add_column("Context")
+    table.add_column("Line", justify="right")
+    table.add_column("Col", justify="right")
+
+    for idx, error in enumerate(errors, start=1):
+        table.add_row(
+            str(idx),
+            error.message,
+            error.context or "",
             str(error.line),
             str(error.column),
         )
@@ -116,6 +137,14 @@ def main() -> int:
 
     if result.parse_errors:
         console.print(_build_parse_error_table(result.parse_errors))
+        return 1
+
+    if result.ast is None:
+        return 1
+
+    semantic = analyze_semantic(result.ast)
+    if semantic.errors:
+        console.print(_build_semantic_error_table(semantic.errors))
         return 1
 
     _print_parse_success(console, result, show_tree)
