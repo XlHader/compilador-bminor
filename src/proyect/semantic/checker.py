@@ -388,6 +388,12 @@ def _analyze_class_decl(
         declaration.name,
         members,
     )
+    class_scope = SemanticScope(f"class:{declaration.name}", parent=scope)
+    for member_symbol in members.values():
+        class_scope.define_value(member_symbol)
+    for member in declaration.members:
+        if isinstance(member, FunctionDecl) and member.name in members:
+            _analyze_callable_body(member, class_scope, result)
 
 
 def _analyze_function_decl(
@@ -401,17 +407,26 @@ def _analyze_function_decl(
             result, declaration, "nested function definition is not allowed"
         )
         return
-    if resolve_type_node(declaration.function_type, scope) is None:
+    _analyze_callable_body(declaration, scope, result)
+
+
+def _analyze_callable_body(
+    declaration: FunctionDecl,
+    parent_scope: SemanticScope,
+    result: SemanticResult,
+) -> None:
+    function_type = resolve_type_node(declaration.function_type, parent_scope)
+    if function_type is None:
         _error(
             result,
             declaration,
             f"invalid function type for '{declaration.name}'",
         )
     function_scope = SemanticScope(
-        f"function:{declaration.name}", parent=scope
+        f"function:{declaration.name}", parent=parent_scope
     )
     for parameter in declaration.function_type.parameters:
-        parameter_type = resolve_type_node(parameter.type_node, scope)
+        parameter_type = resolve_type_node(parameter.type_node, parent_scope)
         if parameter_type is None:
             _error(
                 result,
@@ -433,7 +448,6 @@ def _analyze_function_decl(
             _error(result, parameter, f"redeclaration of '{parameter.name}'")
     if declaration.body is None:
         return
-    function_type = resolve_type_node(declaration.function_type, scope)
     return_type = (
         function_type.return_type
         if isinstance(function_type, FunctionSemanticType)
@@ -705,6 +719,32 @@ def _expr_type(
             return ErrorType()
         target_type = _expr_type(expr.target, scope, result)
         value_type = _expr_type(expr.value, scope, result)
+        if expr.operator != "=":
+            compound_ops = {
+                "+=": "+",
+                "-=": "-",
+                "*=": "*",
+                "/=": "/",
+            }
+            binary_operator = compound_ops.get(expr.operator)
+            compound_result = (
+                is_binary_operator_applicable(
+                    target_type,
+                    binary_operator,
+                    value_type,
+                )
+                if binary_operator is not None
+                else None
+            )
+            if compound_result is None or not are_assignment_compatible(
+                target_type, compound_result
+            ):
+                _error(
+                    result,
+                    expr,
+                    f"invalid compound assignment operator '{expr.operator}'",
+                )
+                return ErrorType()
         if not are_assignment_compatible(target_type, value_type):
             _error(
                 result,
@@ -715,12 +755,16 @@ def _expr_type(
         result.node_types[id(expr)] = target_type
         return target_type
     elif isinstance(expr, CallExpr):
+        callee_type = _expr_type(expr.callee, scope, result)
         argument_types = [
             _expr_type(argument, scope, result) for argument in expr.arguments
         ]
+        callee_symbol = result.resolved_symbols.get(id(expr.callee))
         if (
             isinstance(expr.callee, IdentifierExpr)
-            and expr.callee.name == "array_length"
+            and isinstance(callee_symbol, Symbol)
+            and callee_symbol.name == "array_length"
+            and callee_symbol.node is None
         ):
             if len(argument_types) != 1:
                 _error(result, expr, "array_length expects one argument")
@@ -730,7 +774,6 @@ def _expr_type(
                 return ErrorType()
             result.node_types[id(expr)] = PrimitiveType("integer")
             return PrimitiveType("integer")
-        callee_type = _expr_type(expr.callee, scope, result)
         if isinstance(callee_type, FunctionSemanticType):
             if len(argument_types) != len(callee_type.parameters):
                 _error(

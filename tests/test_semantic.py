@@ -2572,6 +2572,146 @@ def test_semantic_accepts_new_without_init_and_no_args() -> None:
     assert not result.errors
 
 
+def test_semantic_analyzes_class_method_bodies() -> None:
+    program = _program(
+        _class(
+            "Counter",
+            members=[
+                _func(
+                    "run",
+                    SimpleType(span=_span(), name="integer"),
+                    body=BlockStmt(
+                        span=_span(),
+                        statements=[
+                            ReturnStmt(
+                                span=_span(),
+                                value=IdentifierExpr(
+                                    span=_span(), name="missing"
+                                ),
+                            )
+                        ],
+                    ),
+                )
+            ],
+        ),
+        _func("main", SimpleType(span=_span(), name="void")),
+    )
+
+    result = analyze_semantic(program)
+
+    assert any("missing" in error.message.lower() for error in result.errors)
+
+
+def test_semantic_rejects_invalid_compound_assignment_operator() -> None:
+    from proyect.parser.models import AssignmentExpr
+
+    program = _program(
+        _func(
+            "main",
+            SimpleType(span=_span(), name="void"),
+            body=BlockStmt(
+                span=_span(),
+                statements=[
+                    _var(
+                        "flag",
+                        SimpleType(span=_span(), name="boolean"),
+                        initializer=LiteralExpr(
+                            span=_span(),
+                            value=True,
+                            literal_type="boolean",
+                        ),
+                    ),
+                    ExprStmt(
+                        span=_span(),
+                        expression=AssignmentExpr(
+                            span=_span(),
+                            operator="+=",
+                            target=IdentifierExpr(span=_span(), name="flag"),
+                            value=LiteralExpr(
+                                span=_span(),
+                                value=True,
+                                literal_type="boolean",
+                            ),
+                        ),
+                    ),
+                ],
+            ),
+        )
+    )
+
+    result = analyze_semantic(program)
+
+    assert any(
+        "compound" in error.message.lower() or "+=" in error.message
+        for error in result.errors
+    )
+
+
+def test_semantic_respects_shadowing_of_array_length() -> None:
+    from proyect.parser.models import ArrayInitializer, CallExpr
+
+    program = _program(
+        _func(
+            "main",
+            SimpleType(span=_span(), name="integer"),
+            body=BlockStmt(
+                span=_span(),
+                statements=[
+                    _var(
+                        "a",
+                        ArrayType(
+                            span=_span(),
+                            element_type=SimpleType(
+                                span=_span(), name="integer"
+                            ),
+                            size=LiteralExpr(
+                                span=_span(),
+                                value=1,
+                                literal_type="integer",
+                            ),
+                        ),
+                        initializer=ArrayInitializer(
+                            span=_span(),
+                            elements=[
+                                LiteralExpr(
+                                    span=_span(),
+                                    value=1,
+                                    literal_type="integer",
+                                )
+                            ],
+                        ),
+                    ),
+                    _var(
+                        "array_length",
+                        SimpleType(span=_span(), name="integer"),
+                        initializer=LiteralExpr(
+                            span=_span(),
+                            value=42,
+                            literal_type="integer",
+                        ),
+                    ),
+                    ReturnStmt(
+                        span=_span(),
+                        value=CallExpr(
+                            span=_span(),
+                            callee=IdentifierExpr(
+                                span=_span(), name="array_length"
+                            ),
+                            arguments=[IdentifierExpr(span=_span(), name="a")],
+                        ),
+                    ),
+                ],
+            ),
+        )
+    )
+
+    result = analyze_semantic(program)
+
+    assert any(
+        "non-callable" in error.message.lower() for error in result.errors
+    )
+
+
 def test_main_prints_semantic_errors(
     monkeypatch: pytest.MonkeyPatch,
     tmp_path: Path,
