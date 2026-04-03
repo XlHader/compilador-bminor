@@ -166,7 +166,7 @@ def test_parse_good0_bminor() -> None:
     assert result.lex_errors == []
     assert result.parse_errors == []
     assert isinstance(result.ast, Program)
-    assert len(result.ast.declarations) == 9
+    assert len(result.ast.declarations) == 13
 
 
 def test_parse_new_member_and_ternary() -> None:
