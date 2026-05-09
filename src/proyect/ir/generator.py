@@ -86,6 +86,8 @@ class FieldPlace:
 
 Place = VariablePlace | ArrayElementPlace | FieldPlace
 
+_RECEIVER_NAME = "$self"
+
 
 def generate_ir(program: Program, semantic: SemanticResult) -> IRResult:
     if semantic.errors:
@@ -158,7 +160,8 @@ class _IRGenerator:
         self._emit("LABEL", name)
         if class_name is not None:
             class_type = self._lookup_class_type(class_name)
-            self._emit(param_opcode(class_type), "self")
+            self.name_counts.setdefault("self", 1)
+            self._emit(param_opcode(class_type), _RECEIVER_NAME)
         for parameter in declaration.function_type.parameters:
             parameter_type = self._type_from_parameter(parameter)
             parameter_name = self._storage_name_for_node(
@@ -451,7 +454,7 @@ class _IRGenerator:
             symbol = self.semantic.resolved_symbols.get(id(expr))
             semantic_type = self._node_type(expr)
             if symbol is not None and symbol.kind == "field":
-                return FieldPlace("self", symbol.name, semantic_type)
+                return FieldPlace(_RECEIVER_NAME, symbol.name, semantic_type)
             return VariablePlace(
                 self._storage_name_for_symbol(symbol, expr.name),
                 semantic_type,
@@ -511,7 +514,13 @@ class _IRGenerator:
             if isinstance(semantic_type, ArraySemanticType)
             else PrimitiveType("integer")
         )
-        array = self._new_array(element_type, len(initializer.elements))
+        length = (
+            semantic_type.size
+            if isinstance(semantic_type, ArraySemanticType)
+            and semantic_type.size is not None
+            else len(initializer.elements)
+        )
+        array = self._new_array(element_type, length)
         for index, element in enumerate(initializer.elements):
             index_register = self._literal_register(
                 index,
@@ -568,7 +577,7 @@ class _IRGenerator:
         if isinstance(callee, IdentifierExpr):
             symbol = self.semantic.resolved_symbols.get(id(callee))
             if symbol is not None and symbol.kind == "method":
-                return self._method_name(symbol), ["self"]
+                return self._method_name(symbol), [_RECEIVER_NAME]
             return (symbol.name if symbol is not None else callee.name), []
         if isinstance(callee, MemberExpr):
             symbol = self.semantic.resolved_symbols.get(id(callee))

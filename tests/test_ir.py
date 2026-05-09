@@ -231,6 +231,23 @@ def test_generate_ir_lowers_arrays_and_indexing() -> None:
     assert any(op[0] == "ALENGTH" for op in tuples)
 
 
+def test_generate_ir_uses_declared_size_for_partial_array_init() -> None:
+    tuples = _ops(
+        """
+        values: array [3] integer = {1};
+        main: function integer () = {
+            return array_length(values);
+        }
+        """
+    )
+
+    new_array = next(
+        instruction for instruction in tuples if instruction[0] == "NEWARRAY"
+    )
+    length_register = new_array[2]
+    assert ("MOVI", 3, length_register) in tuples
+
+
 def test_generate_ir_lowers_objects_members_and_methods() -> None:
     tuples = _ops(
         """
@@ -276,8 +293,63 @@ def test_generate_ir_lowers_unqualified_method_calls_with_self() -> None:
     calls = [instruction for instruction in tuples if instruction[0] == "CALL"]
     assert ("CALL", "get", "R1") not in calls
     assert any(
-        instruction[1] == "Box.get" and instruction[2] == "self"
+        instruction[1] == "Box.get" and instruction[2] == "$self"
         for instruction in calls
+    )
+
+
+def test_generate_ir_reserves_receiver_when_user_declares_self() -> None:
+    tuples = _ops(
+        """
+        Box: class = {
+            value: integer;
+            set: function void (self: integer) = {
+                value = self;
+            }
+        }
+        main: function integer () = {
+            b: Box;
+            b = new Box();
+            b.set(7);
+            return 0;
+        }
+        """
+    )
+
+    params = [
+        instruction for instruction in tuples if instruction[0] == "PARAMI"
+    ]
+    assert ("PARAMI", "self") not in params
+    assert ("PARAMREF", "$self") in tuples
+    assert any(
+        instruction[0] == "SETFIELD" and instruction[2] == "$self"
+        for instruction in tuples
+    )
+
+
+def test_generate_ir_receiver_avoids_internal_like_user_name() -> None:
+    tuples = _ops(
+        """
+        Box: class = {
+            value: integer;
+            set: function void (__self: integer) = {
+                value = __self;
+            }
+        }
+        main: function integer () = {
+            b: Box;
+            b = new Box();
+            b.set(7);
+            return 0;
+        }
+        """
+    )
+
+    assert ("PARAMREF", "$self") in tuples
+    assert ("PARAMI", "__self") in tuples
+    assert any(
+        instruction[0] == "SETFIELD" and instruction[2] == "$self"
+        for instruction in tuples
     )
 
 
