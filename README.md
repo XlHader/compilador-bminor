@@ -5,11 +5,13 @@ Proyecto para implementar un compilador de BMinor por fases usando Python y
 
 ## Estado actual
 
-- Fases implementadas: analisis lexico + analisis sintactico + analisis semantico.
+- Fases implementadas: analisis lexico + analisis sintactico + analisis
+  semantico + generacion de IR de tres direcciones.
 - El lexer reporta errores con linea, columna e indice.
 - El parser construye un AST y reporta errores sintacticos con token,
   lexema, linea y columna.
-- La CLI ejecuta parser, analisis semantico y visualiza el AST con Rich Tree y Graphviz.
+- La CLI ejecuta parser, analisis semantico, visualiza el AST con Rich Tree y
+  Graphviz, y puede imprimir IR con `--ir`.
 
 ## Caracteristicas soportadas hoy
 
@@ -33,6 +35,7 @@ Proyecto para implementar un compilador de BMinor por fases usando Python y
   - `examples/sieve.bp`
 - Lexer: `src/proyect/lexer/`
 - Parser y AST: `src/proyect/parser/`
+- Generacion de IR: `src/proyect/ir/`
 - Visualizacion del AST: `src/proyect/ast_visualizer/`
 - Entrypoint CLI: `src/proyect/main.py`
 - Tests del lexer: `tests/test_lexer.py`
@@ -67,6 +70,12 @@ PYTHONPATH=src python -m proyect.main examples/good0.bminor
 PYTHONPATH=src python -m proyect.main examples/sieve.bp
 ```
 
+Para imprimir el IR de tres direcciones despues del analisis semantico:
+
+```bash
+PYTHONPATH=src python -m proyect.main examples/parser.bp --ir --no-tree
+```
+
 Codigos de salida de la CLI:
 
 - `0`: analisis lexico, sintactico y semantico exitoso
@@ -83,6 +92,72 @@ Codigos de salida de la CLI:
   y columna.
 - Si no hay errores, muestra `Parse successful` y el AST como arbol Rich Tree
   (opcionalmente tambien como imagen Graphviz con `--graphviz`).
+- Con `--ir`, si no hay errores, imprime una seccion `IR Code` con las
+  instrucciones generadas.
+
+## Generacion de IR
+
+La fase de IR convierte el AST validado semanticamente en una secuencia
+deterministica de instrucciones de tres direcciones. Los registros virtuales
+temporales usan estilo SSA (`R1`, `R2`, `R3`, ...): cada temporal se asigna una
+sola vez. Las variables, campos de objetos y elementos de arreglos se mantienen
+como ubicaciones mutables mediante instrucciones de carga y almacenamiento.
+
+Uso programatico:
+
+```python
+from proyect.ir import format_ir, generate_ir
+from proyect.parser import parse_bminor
+from proyect.semantic import analyze_semantic
+
+parsed = parse_bminor("main: function integer () = { return 0; }")
+semantic = analyze_semantic(parsed.ast)
+ir = generate_ir(parsed.ast, semantic)
+
+print(ir.to_tuples())
+print(format_ir(ir))
+```
+
+Ejemplo de salida para `examples/parser.bp`:
+
+```text
+LABEL main
+MOVS parser ok, R1
+PRINTS R1
+MOVI 0, R2
+RET R2
+```
+
+### Instrucciones soportadas
+
+El IR incluye las instrucciones base del proyecto para enteros, flotantes,
+bytes/chars, control de flujo, llamadas y retorno:
+
+```text
+MOVI VARI ALLOCI LOADI STOREI ADDI SUBI MULI DIVI PRINTI CMPI AND OR
+MOVF VARF ALLOCF LOADF STOREF ADDF SUBF MULF DIVF PRINTF CMPF
+MOVB VARB ALLOCB LOADB STOREB PRINTB CMPB
+LABEL BRANCH CBRANCH CALL RET
+```
+
+Tambien se documentan extensiones necesarias para el lenguaje actual completo:
+
+```text
+MOVS VARS ALLOCS LOADS STORES CONCATS CMPS PRINTS
+VARREF ALLOCREF LOADREF STOREREF
+NEWARRAY ALOAD ASTORE ALENGTH
+NEWOBJ GETFIELD SETFIELD
+PHI PARAMI PARAMF PARAMB PARAMS PARAMREF MODI MODF POWI
+```
+
+Cobertura de lenguaje del IR:
+
+- literales y operaciones `integer`, `float`, `boolean`, `char` y `string`,
+- declaraciones, cargas, stores y asignaciones compuestas,
+- `print`, `return`, bloques, `if`, `while`, `for` y ternario `?:`,
+- funciones, parametros, llamadas y retornos `void`/no-`void`,
+- clases, `new`, `init`, metodos, campos y acceso con `.`,
+- arreglos, inicializadores `{...}`, indices `arr[i]` y `array_length`.
 
 ## Validar los examples
 

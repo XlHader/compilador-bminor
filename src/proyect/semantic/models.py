@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from types import MappingProxyType
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeAlias
 
 if TYPE_CHECKING:
     from .symtab import SemanticScope
@@ -25,15 +25,6 @@ class PrimitiveType:
 @dataclass(frozen=True, slots=True)
 class ErrorType:
     pass
-
-
-SemanticType = (
-    PrimitiveType
-    | ErrorType
-    | "ArraySemanticType"
-    | "FunctionSemanticType"
-    | "ClassSemanticType"
-)
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,6 +57,15 @@ class ClassSemanticType:
         object.__setattr__(
             self, "members", MappingProxyType(dict(self.members))
         )
+
+
+SemanticType: TypeAlias = (
+    PrimitiveType
+    | ErrorType
+    | ArraySemanticType
+    | FunctionSemanticType
+    | ClassSemanticType
+)
 
 
 @dataclass(slots=True)

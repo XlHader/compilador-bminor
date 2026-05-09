@@ -6,6 +6,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .ast_visualizer import render_ast_graphviz, render_ast_tree
+from .ir import format_ir, generate_ir
 from .lexer import LexError
 from .logging_config import configure_logging
 from .parser import ParseError, ParseResult, parse_bminor
@@ -117,6 +118,11 @@ def main() -> int:
         metavar="PATH",
         help="Generate Graphviz AST visualization (default: output/ast.png)",
     )
+    _ = parser.add_argument(
+        "--ir",
+        action="store_true",
+        help="Display generated three-address IR after semantic validation",
+    )
     args: Namespace = parser.parse_args()
 
     show_tree = args.tree and not args.no_tree
@@ -148,6 +154,17 @@ def main() -> int:
         return 1
 
     _print_parse_success(console, result, show_tree)
+
+    if args.ir:
+        ir_result = generate_ir(result.ast, semantic)
+        if ir_result.diagnostics:
+            for diagnostic in ir_result.diagnostics:
+                console.print(
+                    f"[bold red]IR error:[/bold red] {diagnostic.message}"
+                )
+            return 1
+        console.print("[bold blue]IR Code:[/bold blue]")
+        console.print(format_ir(ir_result))
 
     if args.graphviz and result.ast is not None:
         output_path = Path(args.graphviz)

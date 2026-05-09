@@ -5,10 +5,11 @@ description = "Base project for compiler"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "rich>=13.9.0,<14.0.0",
-    "graphviz>=0.20.3,<0.21.0",
+    "rich>=14.3.0,<15.0.0",
+    "graphviz>=0.21,<0.22",
     "multimethod>=1.12,<2.0",
     "loguru>=0.7.2,<0.8.0",
+    "sly>=0.5,<0.6",
 ]
 
 [project.optional-dependencies]
