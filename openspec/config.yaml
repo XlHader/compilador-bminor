@@ -1,0 +1,66 @@
+schema: spec-driven
+
+context: |
+  Proyecto: compilador para el lenguaje BMinor escrito en Python.
+  Objetivo actual: mantener un frontend de compilador claro y testeable,
+  con fases de lexer, parser, AST/visualización y CLI.
+
+  Stack técnico:
+  - Python 3.11+.
+  - SLY para lexer/parser.
+  - pytest para pruebas.
+  - ruff para lint y formato.
+  - rich para salida CLI.
+  - graphviz para visualización del AST.
+
+  Estructura relevante:
+  - src/proyect/lexer/: tokenización, errores léxicos y modelos.
+  - src/proyect/parser/: gramática, precedencia, AST y errores sintácticos.
+  - src/proyect/main.py: entrada CLI.
+  - tests/: pruebas unitarias y smoke tests.
+  - examples/: programas BMinor válidos e inválidos.
+
+  Convenciones del proyecto:
+  - Usar type hints en código fuente.
+  - Mantener línea máxima de 79 caracteres.
+  - Usar strings con comillas dobles.
+  - Preferir imports absolutos o relativos explícitos; no usar wildcard imports.
+  - Usar dataclasses para modelos y nodos de datos.
+  - Representar errores mediante objetos de resultado, no excepciones públicas
+    para flujo normal del lexer/parser.
+  - No agregar comentarios salvo que aclaren una decisión no obvia.
+
+  Validación esperada:
+  - Ejecutar pytest para cambios funcionales.
+  - Ejecutar ruff check . y ruff format --check . para cambios de código.
+  - Para cambios de parser/lexer, agregar o actualizar pruebas específicas.
+  - Para cambios de CLI, validar al menos un ejemplo con
+    PYTHONPATH=src python -m proyect.main examples/parser.bp.
+
+rules:
+  proposal:
+    - Explicar el problema o mejora en términos del lenguaje BMinor.
+    - Incluir alcance y no-alcance explícitos.
+    - Identificar si afecta lexer, parser, AST, CLI, tests o examples.
+    - Mencionar compatibilidad con programas BMinor existentes cuando aplique.
+    - Preferir cambios pequeños y verificables sobre rediseños amplios.
+
+  design:
+    - Describir cambios de gramática, tokens, precedencia o AST si existen.
+    - Incluir estrategia de errores para entradas inválidas.
+    - Explicar el flujo de datos desde source code hasta tokens, AST o CLI.
+    - Mantener límites claros entre lexer, parser, modelos y presentación CLI.
+    - Evitar introducir dependencias nuevas salvo justificación explícita.
+
+  specs:
+    - Escribir requirements observables y testeables.
+    - Separar comportamiento válido, comportamiento inválido y diagnósticos.
+    - Incluir ejemplos breves de código BMinor cuando aclaren el requisito.
+    - Cubrir regresiones relevantes para lexer/parser/AST.
+
+  tasks:
+    - Dividir el trabajo en pasos pequeños que puedan revisarse por separado.
+    - Incluir tareas de pruebas antes o junto con cambios funcionales.
+    - Añadir verificación con pytest y ruff cuando se modifique código Python.
+    - Actualizar examples o documentación solo cuando el comportamiento cambie.
+    - No modificar lexer/parser sin indicar las pruebas específicas afectadas.
