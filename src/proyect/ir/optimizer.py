@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import math
 from collections.abc import Iterable
 from typing import Any
 
@@ -317,11 +318,14 @@ class IROptimizer:
         left_value: Any,
         right_value: Any,
     ) -> IRInstruction | None:
-        if op in {"MULI", "MULF"}:
+        if op == "MULI":
             if left_value == 0 or right_value == 0:
-                return self._constant_instruction(
-                    op, 0.0 if op.endswith("F") else 0, dst
-                )
+                return self._constant_instruction(op, 0, dst)
+            if left_value == 1 and right_value is not None:
+                return self._constant_instruction(op, right_value, dst)
+            if right_value == 1 and left_value is not None:
+                return self._constant_instruction(op, left_value, dst)
+        if op == "MULF":
             if left_value == 1 and right_value is not None:
                 return self._constant_instruction(op, right_value, dst)
             if right_value == 1 and left_value is not None:
@@ -368,10 +372,14 @@ class IROptimizer:
             return left - right
         if op.startswith("MUL"):
             return left * right
-        if op.startswith("DIV"):
-            return left / right if op.endswith("F") else left // right
-        if op.startswith("MOD"):
-            return left % right
+        if op == "DIVI":
+            return self._c_div(int(left), int(right))
+        if op == "DIVF":
+            return left / right
+        if op == "MODI":
+            return self._c_mod(int(left), int(right))
+        if op == "MODF":
+            return math.fmod(left, right)
         if op.startswith("POW"):
             return left**right
         if op == "AND":
@@ -383,6 +391,15 @@ class IROptimizer:
         if op == "CONCATS":
             return str(left) + str(right)
         return None
+
+    def _c_div(self, left: int, right: int) -> int:
+        quotient = abs(left) // abs(right)
+        if (left < 0) != (right < 0):
+            return -quotient
+        return quotient
+
+    def _c_mod(self, left: int, right: int) -> int:
+        return left - self._c_div(left, right) * right
 
     def _eval_compare(self, operator: str, left: Any, right: Any) -> bool:
         if operator == "==":

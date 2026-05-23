@@ -84,6 +84,26 @@ def test_o1_preserves_division_and_modulo_by_zero() -> None:
     assert ("MODI", "R1", "R2", "R4") in out
 
 
+def test_o1_folds_integer_division_and_modulo_with_c_semantics() -> None:
+    tuples = [
+        ("MOVI", -3, "R1"),
+        ("MOVI", 2, "R2"),
+        ("DIVI", "R1", "R2", "R3"),
+        ("MODI", "R1", "R2", "R4"),
+        ("MOVI", 3, "R5"),
+        ("MOVI", -2, "R6"),
+        ("DIVI", "R5", "R6", "R7"),
+        ("MODI", "R5", "R6", "R8"),
+    ]
+
+    out = _optimize(tuples, level=1)
+
+    assert ("MOVI", -1, "R3") in out
+    assert ("MOVI", -1, "R4") in out
+    assert ("MOVI", -1, "R7") in out
+    assert ("MOVI", 1, "R8") in out
+
+
 def test_o1_simplifies_safe_algebraic_identities() -> None:
     tuples = [
         ("LOADI", "x", "R1"),
@@ -100,6 +120,20 @@ def test_o1_simplifies_safe_algebraic_identities() -> None:
 
     assert ("MOVI", 0, "R3") in out
     assert ("MOVI", 10, "R6") in out
+
+
+def test_o1_does_not_simplify_unknown_float_multiply_by_zero() -> None:
+    tuples = [
+        ("LOADF", "x", "R1"),
+        ("MOVF", 0.0, "R2"),
+        ("MULF", "R1", "R2", "R3"),
+        ("PRINTF", "R3"),
+    ]
+
+    out = _optimize(tuples, level=1)
+
+    assert ("MULF", "R1", "R2", "R3") in out
+    assert ("MOVF", 0.0, "R3") not in out
 
 
 def test_o1_simplifies_constant_comparisons_and_branches() -> None:
