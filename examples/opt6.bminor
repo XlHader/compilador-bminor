@@ -1,0 +1,8 @@
+main: function integer () = {
+    x: integer = 2 + 3;
+    y: integer = 99 + 1;
+
+    print x;
+
+    return 0;
+}
