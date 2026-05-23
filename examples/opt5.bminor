@@ -1,0 +1,13 @@
+main: function integer () = {
+    a: integer = 10 + 0;
+    b: integer = 10 * 1;
+    c: integer = 10 - 0;
+    d: integer = 10 / 1;
+
+    print a;
+    print b;
+    print c;
+    print d;
+
+    return 0;
+}

@@ -76,6 +76,14 @@ Para imprimir el IR de tres direcciones despues del analisis semantico:
 PYTHONPATH=src python -m proyect.main examples/parser.bp --ir --no-tree
 ```
 
+El IR tambien acepta niveles de optimizacion locales estilo compilador:
+
+```bash
+PYTHONPATH=src python -m proyect.main examples/opt1.bminor --ir --no-tree -O0
+PYTHONPATH=src python -m proyect.main examples/opt1.bminor --ir --no-tree -O1
+PYTHONPATH=src python -m proyect.main examples/opt1.bminor --ir --no-tree -O2
+```
+
 Codigos de salida de la CLI:
 
 - `0`: analisis lexico, sintactico y semantico exitoso
@@ -93,7 +101,8 @@ Codigos de salida de la CLI:
 - Si no hay errores, muestra `Parse successful` y el AST como arbol Rich Tree
   (opcionalmente tambien como imagen Graphviz con `--graphviz`).
 - Con `--ir`, si no hay errores, imprime una seccion `IR Code` con las
-  instrucciones generadas.
+  instrucciones generadas. Las opciones `-O0`, `-O1` y `-O2` controlan el
+  nivel de optimizacion aplicado antes de imprimir.
 
 ## Generacion de IR
 
@@ -106,17 +115,25 @@ como ubicaciones mutables mediante instrucciones de carga y almacenamiento.
 Uso programatico:
 
 ```python
-from proyect.ir import format_ir, generate_ir
+from proyect.ir import format_ir, generate_ir, optimize_ir
 from proyect.parser import parse_bminor
 from proyect.semantic import analyze_semantic
 
 parsed = parse_bminor("main: function integer () = { return 0; }")
 semantic = analyze_semantic(parsed.ast)
 ir = generate_ir(parsed.ast, semantic)
+optimized = optimize_ir(ir, level=2)
 
-print(ir.to_tuples())
-print(format_ir(ir))
+print(optimized.to_tuples())
+print(format_ir(optimized))
 ```
+
+`-O0` conserva la IR generada. `-O1` aplica optimizaciones locales seguras,
+como constant folding, simplificacion algebraica, comparaciones constantes,
+ramas constantes y eliminacion de codigo inalcanzable simple. `-O2` incluye
+`-O1` y elimina definiciones de temporales puros que no vuelven a usarse. Las
+instrucciones con efectos observables, llamadas, stores, saltos, labels,
+alocaciones y operaciones desconocidas se conservan de forma conservadora.
 
 Ejemplo de salida para `examples/parser.bp`:
 
@@ -254,6 +271,7 @@ PYTHONPATH=src python -m proyect.main examples/parser.bp
 ```
 
 Salida ejemplo:
+
 ```
 Parse successful
 Program
@@ -268,6 +286,7 @@ Program
 ```
 
 Para desactivar:
+
 ```bash
 PYTHONPATH=src python -m proyect.main examples/parser.bp --no-tree
 ```
@@ -281,6 +300,7 @@ PYTHONPATH=src python -m proyect.main examples/parser.bp --graphviz
 ```
 
 Esto guarda `output/ast.png` con una visualizacion grafica del AST donde:
+
 - **Program**: rojo, forma box
 - **Declaraciones** (`Function(...)`, `Variable(...)`, `Class(...)`): azul
 - **Statements** (`Block`, `If`, `While`, `For`, `Return`): naranja
@@ -292,6 +312,7 @@ La visualizacion usa aristas ortogonales y etiquetas cortas como `decl 1`,
 mantenga legible en programas medianos.
 
 Para un path personalizado:
+
 ```bash
 PYTHONPATH=src python -m proyect.main examples/parser.bp --graphviz mi_ast.png
 ```
@@ -310,6 +331,7 @@ brew install graphviz
 ```
 
 Sin el ejecutable del sistema, veras un error como:
+
 ```
 Error generating graph: failed to execute PosixPath('dot')...
 ```

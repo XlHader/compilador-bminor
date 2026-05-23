@@ -1,0 +1,219 @@
+/*
+   opt_all.bminor
+
+   Archivo de prueba integral para el taller de optimización IR.
+
+   Debe probar, al menos:
+
+   -O0:
+     - La IR original no se modifica.
+
+   -O1:
+     - Constant folding entero.
+     - Simplificación algebraica.
+     - Comparaciones constantes.
+     - CBRANCH constante -> BRANCH.
+     - Eliminación de BRANCH al LABEL inmediatamente siguiente.
+     - Eliminación de código inalcanzable después de RET.
+     - No optimizar división por cero.
+
+   -O2:
+     - Incluye todo -O1.
+     - Elimina temporales muertos.
+     - Conserva STORE, PRINT, CALL, RET, LABEL.
+*/
+
+
+/*
+   Esta función prueba que el optimizador NO debe plegar división por cero.
+
+   En -O1 y -O2 debería seguir apareciendo un DIVI relacionado con 10 / 0.
+   La función no se llama desde main, así que no debería afectar la ejecución normal.
+*/
+div_zero_should_not_fold: function integer () = {
+    return 10 / 0;
+}
+
+
+/*
+   Esta función prueba eliminación de código inalcanzable después de RET.
+
+   Después de optimizar con -O1 o -O2, estas instrucciones deberían desaparecer:
+
+       print 999;
+       return 999;
+
+   porque están después de:
+
+       return 1;
+*/
+unreachable_after_return: function integer () = {
+    return 1;
+
+    print 999;
+    return 999;
+}
+
+
+/*
+   Esta función sirve para probar que CALL no se elimina agresivamente.
+
+   En -O2 el CALL debe conservarse si aparece en main.
+*/
+identity: function integer (x: integer) = {
+    print x;
+    return x;
+}
+
+
+main: function integer () = {
+    /*
+       ============================================================
+       1. Simplificación algebraica con constantes
+       ============================================================
+
+       En -O1 deberían reducirse a MOVI directos:
+
+       10 + 0  -> 10
+       0 + 10  -> 10
+       10 - 0  -> 10
+       10 * 1  -> 10
+       1 * 10  -> 10
+       10 * 0  -> 0
+       0 * 10  -> 0
+       10 / 1  -> 10
+    */
+
+    a: integer = 10 + 0;
+    b: integer = 0 + 10;
+    c: integer = 10 - 0;
+    d: integer = 10 * 1;
+    e: integer = 1 * 10;
+    f: integer = 10 * 0;
+    g: integer = 0 * 10;
+    h: integer = 10 / 1;
+
+    print a;
+    print b;
+    print c;
+    print d;
+    print e;
+    print f;
+    print g;
+    print h;
+
+
+    /*
+       ============================================================
+       2. Constant folding compuesto
+       ============================================================
+
+       3 * 4      -> 12
+       2 + 12     -> 14
+
+       En -O1 deberías ver que MULI y ADDI se reemplazan por MOVI.
+       En -O2 deberían desaparecer temporales intermedios que ya no se usan.
+    */
+
+    folded: integer = 2 + 3 * 4;
+    print folded;
+
+
+    /*
+       ============================================================
+       3. Comparación constante verdadera + CBRANCH constante
+       ============================================================
+
+       1 < 2      -> MOVI 1
+       CBRANCH    -> BRANCH hacia la rama verdadera
+
+       En -O1 deberías ver:
+       - CMPI reemplazado por MOVI 1.
+       - CBRANCH reemplazado por BRANCH.
+    */
+
+    if (1 < 2) {
+        print 111;
+    } else {
+        print 222;
+    }
+
+
+    /*
+       ============================================================
+       4. Comparación constante falsa + CBRANCH constante
+       ============================================================
+
+       5 < 4      -> MOVI 0
+       CBRANCH    -> BRANCH hacia la rama falsa
+    */
+
+    if (5 < 4) {
+        print 333;
+    } else {
+        print 444;
+    }
+
+
+    /*
+       ============================================================
+       5. BRANCH al LABEL inmediatamente siguiente
+       ============================================================
+
+       En tu IR de for, normalmente aparece algo como:
+
+           BRANCH for_update1
+           LABEL for_update1
+
+       En -O1 ese BRANCH debe eliminarse.
+    */
+
+    i: integer;
+
+    for (i = 0; i < 3; i++) {
+        print i;
+    }
+
+
+    /*
+       ============================================================
+       6. Temporales muertos en -O2
+       ============================================================
+
+       unused_a y unused_b no se imprimen.
+
+       OJO:
+       No necesariamente debe desaparecer el STOREI de esas variables,
+       porque STOREI se considera instrucción con efecto lateral.
+
+       Pero sí deberían desaparecer temporales intermedios generados para:
+       99 + 1
+       40 + 2
+    */
+
+    unused_a: integer = 99 + 1;
+    unused_b: integer = 40 + 2;
+
+
+    /*
+       ============================================================
+       7. CALL conservador
+       ============================================================
+
+       El CALL no debe eliminarse automáticamente en -O2.
+       Además, identity imprime x, así que tiene efecto observable.
+    */
+
+    call_result: integer = identity(7 + 0);
+
+    print call_result;
+
+
+    /*
+       ============================================================
+       8. RET normal de main
+       ============================================================
+    */
+
+    return 0;
+}
