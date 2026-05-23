@@ -16,10 +16,12 @@ from .opcodes import (
     type_suffix,
     var_opcode,
 )
+from .optimizer import IROptimizer, optimize_ir
 
 __all__ = [
     "IRDiagnostic",
     "IRInstruction",
+    "IROptimizer",
     "IRResult",
     "LabelGenerator",
     "RegisterGenerator",
@@ -28,6 +30,7 @@ __all__ = [
     "format_ir",
     "generate_ir",
     "load_opcode",
+    "optimize_ir",
     "param_opcode",
     "print_opcode",
     "store_opcode",

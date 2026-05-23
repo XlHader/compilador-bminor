@@ -1,4 +1,4 @@
-from argparse import ArgumentParser, Namespace
+from argparse import ArgumentParser, ArgumentTypeError, Namespace
 from pathlib import Path
 from typing import cast
 
@@ -6,7 +6,7 @@ from rich.console import Console
 from rich.table import Table
 
 from .ast_visualizer import render_ast_graphviz, render_ast_tree
-from .ir import format_ir, generate_ir
+from .ir import format_ir, generate_ir, optimize_ir
 from .lexer import LexError
 from .logging_config import configure_logging
 from .parser import ParseError, ParseResult, parse_bminor
@@ -89,6 +89,20 @@ def _print_parse_success(
         console.print(render_ast_tree(result.ast))
 
 
+def parse_opt_level(value: str) -> int:
+    text = str(value).strip()
+    if text.startswith("-O"):
+        text = text[2:]
+    elif text.startswith("O"):
+        text = text[1:]
+    if not text.isdigit():
+        raise ArgumentTypeError(f"invalid optimization level: {value!r}")
+    level = int(text)
+    if level < 0 or level > 2:
+        raise ArgumentTypeError("optimization level must be 0, 1, or 2")
+    return level
+
+
 def main() -> int:
     console = Console()
     configure_logging()
@@ -122,6 +136,16 @@ def main() -> int:
         "--ir",
         action="store_true",
         help="Display generated three-address IR after semantic validation",
+    )
+    _ = parser.add_argument(
+        "-O",
+        "--opt-level",
+        nargs="?",
+        const="0",
+        default=0,
+        type=parse_opt_level,
+        metavar="LEVEL",
+        help="IR optimization level for --ir output: 0, 1, or 2",
     )
     args: Namespace = parser.parse_args()
 
@@ -163,8 +187,9 @@ def main() -> int:
                     f"[bold red]IR error:[/bold red] {diagnostic.message}"
                 )
             return 1
+        optimized_ir = optimize_ir(ir_result, level=cast(int, args.opt_level))
         console.print("[bold blue]IR Code:[/bold blue]")
-        console.print(format_ir(ir_result))
+        console.print(format_ir(optimized_ir))
 
     if args.graphviz and result.ast is not None:
         output_path = Path(args.graphviz)
