@@ -1,0 +1,41 @@
+Wallet: class = {
+    owner: string;
+    balance: integer;
+
+    init: function void (name: string, initial: integer) = {
+        owner = name;
+        balance = initial;
+    }
+
+    deposit: function void (amount: integer) = {
+        balance += amount;
+    }
+
+    withdraw: function void (amount: integer) = {
+        if (balance >= amount) {
+            balance -= amount;
+        }
+    }
+
+    bonus: function void () = {
+        balance += 3;
+    }
+
+    current: function integer () = {
+        return balance;
+    }
+}
+
+main: function integer () = {
+    wallet: Wallet;
+
+    wallet = new Wallet("Ada", 10);
+    wallet.deposit(15);
+    wallet.withdraw(4);
+    wallet.bonus();
+
+    print "owner", wallet.owner;
+    print "balance", wallet.current();
+
+    return wallet.current();
+}

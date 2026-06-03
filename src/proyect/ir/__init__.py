@@ -1,5 +1,6 @@
 from .formatting import format_instruction, format_ir
 from .generator import generate_ir
+from .interpreter import IRInterp, IRInterpreter, IRRuntimeError
 from .models import (
     IRDiagnostic,
     IRInstruction,
@@ -21,8 +22,11 @@ from .optimizer import IROptimizer, optimize_ir
 __all__ = [
     "IRDiagnostic",
     "IRInstruction",
+    "IRInterp",
+    "IRInterpreter",
     "IROptimizer",
     "IRResult",
+    "IRRuntimeError",
     "LabelGenerator",
     "RegisterGenerator",
     "alloc_opcode",

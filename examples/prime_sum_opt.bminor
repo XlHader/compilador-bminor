@@ -1,0 +1,56 @@
+is_prime: function boolean (n: integer) = {
+    divisor: integer;
+
+    if (n < 2) {
+        return false;
+    }
+
+    divisor = 2;
+    while (divisor * divisor <= n) {
+        if (n % divisor == 0) {
+            return false;
+        }
+        /* Optimizacion esperada: 3 - 2 -> 1 */
+        divisor = divisor + (3 - 2);
+    }
+
+    return true;
+}
+
+sum_primes: function integer (limit: integer) = {
+    candidate: integer;
+    total: integer;
+
+    candidate = 0;
+    total = 0;
+
+    while (candidate <= limit) {
+        if (is_prime(candidate)) {
+            print candidate;
+
+            /* Casos de optimizacion dentro de la suma de primos:
+               10 - 10 -> 0
+               6 / 6   -> 1
+               El resultado sigue siendo sumar candidate.
+            */
+            total = total + (candidate + (10 - 10));
+            total = total + ((6 / 6) - 1);
+        }
+
+        /* Optimizacion esperada: 2 - 1 -> 1 */
+        candidate = candidate + (2 - 1);
+    }
+
+    return total;
+}
+
+main: function integer () = {
+    result: integer;
+
+    print "Primos:";
+    result = sum_primes(20);
+    print "Suma:";
+    print result;
+
+    return result;
+}
