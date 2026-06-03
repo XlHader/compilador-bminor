@@ -48,7 +48,7 @@ main: function integer () = {
     result: integer;
 
     print "Primos:";
-    result = sum_primes(20);
+    result = sum_primes(100);
     print "Suma:";
     print result;
 

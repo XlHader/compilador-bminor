@@ -11,7 +11,8 @@ Proyecto para implementar un compilador de BMinor por fases usando Python y
 - El parser construye un AST y reporta errores sintacticos con token,
   lexema, linea y columna.
 - La CLI ejecuta parser, analisis semantico, visualiza el AST con Rich Tree y
-  Graphviz, y puede imprimir IR con `--ir`.
+  Graphviz, puede imprimir IR con `--ir`, optimizarlo con `-O0`, `-O1`,
+  `-O2`, y ejecutarlo con `--run-ir`.
 
 ## Caracteristicas soportadas hoy
 
@@ -33,6 +34,9 @@ Proyecto para implementar un compilador de BMinor por fases usando Python y
   - `examples/parser.bp`
   - `examples/good0.bminor`
   - `examples/sieve.bp`
+  - `examples/classes_demo.bminor`
+  - `examples/factorial.bminor`
+  - `examples/prime_sum_opt.bminor`
 - Lexer: `src/proyect/lexer/`
 - Parser y AST: `src/proyect/parser/`
 - Generacion de IR: `src/proyect/ir/`
@@ -76,12 +80,30 @@ Para imprimir el IR de tres direcciones despues del analisis semantico:
 PYTHONPATH=src python -m proyect.main examples/parser.bp --ir --no-tree
 ```
 
+Para ejecutar el IR generado con el interprete integrado:
+
+```bash
+PYTHONPATH=src python -m proyect.main examples/parser.bp --run-ir --no-tree
+```
+
+Para mostrar el IR y ejecutarlo en el mismo comando:
+
+```bash
+PYTHONPATH=src python -m proyect.main examples/parser.bp --ir --run-ir --no-tree
+```
+
 El IR tambien acepta niveles de optimizacion locales estilo compilador:
 
 ```bash
 PYTHONPATH=src python -m proyect.main examples/opt1.bminor --ir --no-tree -O0
 PYTHONPATH=src python -m proyect.main examples/opt1.bminor --ir --no-tree -O1
 PYTHONPATH=src python -m proyect.main examples/opt1.bminor --ir --no-tree -O2
+```
+
+Tambien se puede optimizar y ejecutar el IR en una sola pasada:
+
+```bash
+PYTHONPATH=src python -m proyect.main examples/prime_sum_opt.bminor --ir --run-ir -O2 --no-tree
 ```
 
 Codigos de salida de la CLI:
@@ -103,6 +125,9 @@ Codigos de salida de la CLI:
 - Con `--ir`, si no hay errores, imprime una seccion `IR Code` con las
   instrucciones generadas. Las opciones `-O0`, `-O1` y `-O2` controlan el
   nivel de optimizacion aplicado antes de imprimir.
+- Con `--run-ir`, si no hay errores, ejecuta el IR con el interprete integrado
+  y muestra una seccion `IR Interpreter` con los `prints` capturados y el valor
+  de retorno de `main`.
 
 ## Generacion de IR
 
@@ -175,6 +200,99 @@ Cobertura de lenguaje del IR:
 - funciones, parametros, llamadas y retornos `void`/no-`void`,
 - clases, `new`, `init`, metodos, campos y acceso con `.`,
 - arreglos, inicializadores `{...}`, indices `arr[i]` y `array_length`.
+
+## Ejecucion del IR con interpreter
+
+El interprete ejecuta la IR generada por el compilador. Trabaja sobre las
+instrucciones de tres direcciones, crea frames para llamadas a funciones,
+mantiene registros temporales, variables locales/globales, arreglos, objetos y
+captura la salida de `print`.
+
+Comando base:
+
+```bash
+PYTHONPATH=src python -m proyect.main examples/parser.bp --run-ir --no-tree
+```
+
+Salida esperada:
+
+```text
+IR Interpreter:
+prints: ['parser ok']
+return: 0
+```
+
+Para ver IR y ejecucion juntos:
+
+```bash
+PYTHONPATH=src python -m proyect.main examples/parser.bp --ir --run-ir --no-tree
+```
+
+### Demos recomendadas
+
+#### Clases, objetos y metodos
+
+```bash
+PYTHONPATH=src python -m proyect.main examples/classes_demo.bminor --ir --run-ir --no-tree
+```
+
+Este ejemplo crea una clase `Wallet` con campos, constructor y metodos. En IR,
+los metodos se bajan como funciones con nombre calificado (`Wallet.deposit`) y
+el objeto receptor se pasa como parametro interno `$self`.
+
+Salida final esperada:
+
+```text
+IR Interpreter:
+prints: ['owner', 'Ada', 'balance', '24']
+return: 24
+```
+
+#### Recursividad
+
+```bash
+PYTHONPATH=src python -m proyect.main examples/factorial.bminor --ir --run-ir --no-tree
+```
+
+Este ejemplo calcula `fact(5)` con llamadas recursivas. Cada `CALL fact` crea un
+frame nuevo y cada `RET` devuelve el valor al frame anterior.
+
+Salida final esperada:
+
+```text
+IR Interpreter:
+prints: ['120']
+return: 120
+```
+
+#### Primos, suma y optimizacion
+
+```bash
+PYTHONPATH=src python -m proyect.main examples/prime_sum_opt.bminor --ir --run-ir -O2 --no-tree
+```
+
+Este ejemplo genera los primos de `0` a `100`, los imprime y suma el total.
+Ademas incluye expresiones constantes para mostrar optimizacion del IR.
+
+Salida final esperada:
+
+```text
+IR Interpreter:
+prints: ['Primos:', '2', '3', ..., '97', 'Suma:', '1060']
+return: 1060
+```
+
+Para comparar optimizacion:
+
+```bash
+PYTHONPATH=src python -m proyect.main examples/prime_sum_opt.bminor --ir -O0 --no-tree
+PYTHONPATH=src python -m proyect.main examples/prime_sum_opt.bminor --ir -O2 --no-tree
+```
+
+En `-O0`, expresiones como `10 - 10`, `6 / 6`, `3 - 2` y `2 - 1`
+aparecen como operaciones completas (`SUBI`, `DIVI`, etc.). En `-O2`, esas
+expresiones se reducen a movimientos constantes como `MOVI 0` o `MOVI 1`, sin
+cambiar el resultado del programa.
 
 ## Validar los examples
 
